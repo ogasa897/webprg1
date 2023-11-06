@@ -6,5 +6,5 @@ function double(number){
 const a = double(10);
 console.log(a);
 
-const b = double(20);
+const b = double(8);
 console.log(b);
