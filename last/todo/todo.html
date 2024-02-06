@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <div class="wrapper">
+            <h1 id="header">TODOリスト</h1>
+            <div id="input-wrap">
+                <input id="todo-name" type="text" placeholder="タスク名を入力してください">
+                <button onclick="addTask()">タスクを追加</button>
+                <button class="deleteTask-button" onclick="deleteTask()">チェックしたタスクを削除</button>
+            </div>
+            <div id="main-wrap">
+                <form name="task_form">
+                    <ul id="todo-list"></ul>
+                </form>
+            </div>
+        </div>
+        <script src="todo.js"></script>
+    </body>
+</html>
+

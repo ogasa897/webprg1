@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>リップシンクロボ２</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection"></script>
+    <script>
+      let canvas, context; // ロボット描画用キャンバス
+      let meshCanvas, meshContext; // メッシュ描画用キャンバス
+      let video, cameraStream; // ビデオ、カメラ映像
+      let request = null; // リクエスト
+      // MediaPipeFaceMesh モデル
+      let detector;
+      const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
+      const config = {
+        runtime: "mediapipe",
+        solutionPath: "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh",
+      };
+      const init = async () => {
+        // キャンバスの取得
+        canvas = document.getElementById("robot");
+        context = canvas.getContext("2d");
+        meshCanvas = document.getElementById("mesh");
+        meshContext = meshCanvas.getContext("2d");
+        // ビデオ要素の取得、イベントの登録
+        video = document.getElementById("video");
+        video.addEventListener("loadeddata", update);
+        // デテクターの作成
+        detector = await faceLandmarksDetection.createDetector(model, config);
+        document.getElementById("connect").disabled = false;
+        document.getElementById("disconnect").diabled = true;
+      };
+      const connectCamera = () => {
+        // カメラの接続（映像のみ：640×360）
+        const media = navigator.mediaDevices
+          .getUserMedia({
+            audio: false,
+            video: { width: { ideal: 640 }, height: { ideal: 360 } },
+          })
+          .then((stream) => {
+            // 接続
+            [video.srcObject, cameraStream] = [stream, stream];
+            document.getElementById("connect").disabled = true;
+            document.getElementById("disconnect").disabled = false;
+            document.getElementById("message").innerText = "接続開始";
+          })
+          .catch((error) => {
+            // エラー
+            document.getElementById("message").innerText = error;
+          });
+      };
+      const disconnectCamera = () => {
+        // カメラの切断
+        window.cancelAnimationFrame(request);
+        cameraStream.getVideoTracks()[0].stop();
+        document.getElementById("connect").disabled = false;
+        document.getElementById("disconnect").disabled = true;
+        document.getElementById("message").innerText = "切断";
+      };
+      const update = async () => {
+        // 顔の検出
+        const reverse = { flipHorizontal: true };
+        const faces = await detector.estimateFaces(video, reverse);
+        // 検出結果の描画
+        if (faces.length > 0) {
+          document.getElementById("message").innerText = "測定中";
+          const keypoints = faces[0].keypoints;
+          // メッシュを描画
+          meshContext.clearRect(0, 0, meshCanvas.width, meshCanvas.height);
+          if (document.getElementById("meshCheck").checked) {
+            meshContext.fillStyle = "#00FF00";
+            for (const point of keypoints) {
+              meshContext.fillRect(point.x, point.y, 2, 2);
+            }
+          }
+          // ロボットの顔、耳を描画
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          const w = 160;
+          const scale = w / getDistance(keypoints, 234, 454);
+          const h = getDistance(keypoints, 10, 152) * scale;
+          drawRect(canvas.width / 2 - w / 2, 80, w, h);
+          drawRect(canvas.width / 2 - w / 2 - 30, 150, 30, 60);
+          drawRect(canvas.width / 2 + w / 2, 150, 30, 60);
+          // 目を描画
+          let edx1 = getDistance(keypoints, 33, 127) * scale;
+          if (keypoints[33].x < keypoints[127].x) edx1 = 5;
+          const edy1 = getDistance(keypoints, 27, 67) * scale;
+          drawRect(
+            canvas.width / 2 - w / 2 + edx1,
+            80 + edy1,
+            20,
+            20,
+            "#009900"
+          );
+          let edx2 = getDistance(keypoints, 263, 356) * scale;
+          if (keypoints[263].x > keypoints[356].x) edx2 = 5;
+          const edy2 = getDistance(keypoints, 257, 297) * scale;
+          drawRect(
+            canvas.width / 2 + w / 2 - edx2 - 20,
+            80 + edy2,
+            20,
+            20,
+            "#009900"
+          );
+          // 口を描画
+          const mw = getDistance(keypoints, 61, 291) * scale;
+          const mh = getDistance(keypoints, 0, 17) * scale;
+          let mdx = getDistance(keypoints, 61, 132) * scale;
+          if (keypoints[61].x < keypoints[132].x) mdx = 5;
+          if (mdx + mw > w) mdx = w - mw - 5;
+          const mdy = getDistance(keypoints, 10, 0) * scale;
+          drawRect(canvas.width / 2 - w / 2 + mdx, 80 + mdy, mw, mh, "#000000");
+        }
+        request = window.requestAnimationFrame(update);
+      };
+      const getDistance = (keypoints, id1, id2) => {
+        // ２点間の距離
+        const [x1, y1] = [keypoints[id1].x, keypoints[id1].y];
+        const [x2, y2] = [keypoints[id2].x, keypoints[id2].y];
+        if (document.getElementById("lineCheck").checked) {
+          // 測定ポイント、ラインの描画
+          meshContext.fillStyle = "#FF0000";
+          meshContext.fillRect(x1 - 2, y1 - 2, 4, 4);
+          meshContext.fillRect(x2 - 2, y2 - 2, 4, 4);
+          meshContext.strokeStyle = "#FF0000";
+          meshContext.beginPath();
+          meshContext.moveTo(x1, y1);
+          meshContext.lineTo(x2, y2);
+          meshContext.stroke();
+        }
+        return Math.hypot(x1 - x2, y1 - y2);
+      };
+      const drawRect = (x, y, w, h, color = "#3399CC") => {
+        // 縁取り＋塗りつぶし矩形の描画
+        context.fillStyle = color;
+        context.fillRect(x, y, w, h);
+        context.lineWidth = 4;
+        context.strokeStyle = "#FFFFFF";
+        context.strokeRect(x, y, w, h);
+      };
+    </script>
+    <style>
+      #message {
+        color: #009900;
+      }
+      #robot {
+        margin-right: 10px;
+        float: left;
+        background-color: #000000;
+      }
+      #videoArea {
+        position: relative;
+      }
+      video,
+      #mesh {
+        position: absolute;
+        top: 0px;
+        left: 370px;
+      }
+      video {
+        transform: scaleX(-1);
+        background-color: #000000;
+      }
+    </style>
+  </head>
+  <body onload="init()">
+    <p>リップシンクロボ２</p>
+    <input
+      type="button"
+      id="connect"
+      value="カメラ接続"
+      onclick="connectCamera()"
+    />
+    <input
+      type="button"
+      id="disconnect"
+      value="切断"
+      onclick="disconnectCamera()"
+    />
+    <span id="message">切断</span>
+    <input type="checkbox" id="lineCheck" />測定ポイントを表示する
+    <input type="checkbox" id="meshCheck" />メッシュを表示する
+    <hr />
+    <canvas id="robot" width="360" height="360"></canvas>
+    <div id="videoArea">
+      <video id="video" width="640" height="360" autoplay></video>
+      <canvas id="mesh" width="640" height="360"></canvas>
+    </div>
+  </body>
+</html>

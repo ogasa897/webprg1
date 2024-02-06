@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <script src="https://cdn.jsdelivr.net/npm/jimp/browser/lib/jimp.min.js"></script>
+    </head>
+    <body>
+        <h1>画像加工アプリ</h1>
+        <section>
+            画像ファイル：
+            <input type="file" id="image-input" accept="image/*">
+            <input type="button" value="元の画像に戻す" onclick="drawImage()" />
+            <input type="button" value="画像を保存する" onclick="saveImage()" />
+        </section>
+        <hr />
+        <section>
+            エフェクト：
+            <input type="button" value="セピア" onclick="sepia()" />
+            <input type="button" value="グレースケール" onclick="grey()" />
+            <input type="button" value="色反転" onclick="invert()" />
+            <input type="button" value="ぼかし" onclick="gaussian()" />
+            <input type="button" value="モザイク" onclick="mosaic()" />
+        </section>
+        <br />
+        <section>
+            変形：
+            <input type="button" value="上下反転" onclick="flipTB()" />
+            <input type="button" value="左右反転" onclick="flipLR()" />
+            <input type="button" value="90度回転" onclick="rotate()" />
+        </section>
+        <hr />
+        <section>
+            明度：<input type="range" id="brightness" value="0" min="-100" max="100" />
+            彩度：<input type="range" id="saturation" value="0" min="-100" max="100" />
+            コントラスト：<input type="range" id="contrast" value="0" min="-10" max="10" />
+        </section>
+        <br />
+        <section>
+            画質：<input type="range" id="quality" value="100" min="0" max="100" />
+        </section>
+        <hr />
+        <canvas id="image-canvas"></canvas>
+        <script src="./main.js"></script>
+    </body>
+</html>

@@ -1,0 +1,108 @@
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/jimp/browser/lib/jimp.min.js"></script>
+</head>
+<body>
+  <!-- ユーザーが画像を選択できるようにinputタグを用意する -->
+  <input type="file" id="image-input" accept="image/*">
+  <!-- 選択した画像を表示するためのcanvasタグを用意する -->
+  <canvas id="image-canvas"></canvas>
+  <!-- 画像を回転させるためのボタンを用意する -->
+  <button id="rotate-button">画像を90度回転させる</button>
+  <!-- 回転させた画像を保存するためのボタンを用意する -->
+  <button id="save-button">画像を保存する</button>
+  <script>
+    // inputタグとcanvasタグとボタンを変数に代入する
+    const imageInput = document.getElementById("image-input");
+    const imageCanvas = document.getElementById("image-canvas");
+    const rotateButton = document.getElementById("rotate-button");
+    const saveButton = document.getElementById("save-button");
+
+    // canvasのコンテキストを取得する
+    const ctx = imageCanvas.getContext("2d");
+
+    // 画像を読み込むための変数を宣言する
+    let image;
+    let imageWidth;
+    let imageHeight;
+
+
+
+    // inputタグに変更があったときのイベントリスナーを登録する
+    imageInput.addEventListener("change", function() {
+      const file = this.files[0];   // 選択したファイルを取得する
+      // ファイルが画像でなければ処理を中止する
+      if (!file || !file.type.startsWith("image/")) return;
+
+      // ファイルをjimpで読み込む
+      Jimp.read(URL.createObjectURL(file)).then(function(img) {
+        image = img;  // 画像を変数に代入する
+        imageWidth = image.bitmap.width; // 画像の幅と高さを取得する
+        imageHeight = image.bitmap.height;
+        imageCanvas.width = imageWidth; // canvasのサイズを画像に合わせる
+        imageCanvas.height = imageHeight;
+
+
+        //canvasに画像を描画する
+        drawPicture();
+
+      }).catch(function(err) {
+        console.error(err);
+      });
+    });
+
+    // canvasに画像を描画する関数
+    function drawPicture(){
+        image.getBase64(Jimp.AUTO, function(err, data) {
+          if (err) throw err;
+          const imageElement = new Image();
+          imageElement.src = data;
+          imageElement.onload = function() {
+            ctx.drawImage(imageElement, 0, 0, imageWidth, imageHeight);
+          };
+        });
+    }
+
+
+
+    // 回転ボタンが押されたときのイベントリスナーを登録する
+    rotateButton.addEventListener("click", function() {
+      // 画像が読み込まれていなければ処理を中止する
+      if (!image) return;
+
+      // 画像を90度回転させる
+      image.rotate(90);
+      // 画像の幅と高さを更新する
+      imageWidth = image.bitmap.width;
+      imageHeight = image.bitmap.height;
+      // canvasのサイズを画像に合わせる
+      imageCanvas.width = imageWidth;
+      imageCanvas.height = imageHeight;
+
+      // canvasに画像を描画する
+      drawPicture();
+    });
+
+    // 保存ボタンが押されたときのイベントリスナーを登録する
+    saveButton.addEventListener("click", function() {
+      // 画像が読み込まれていなければ処理を中止する
+      if (!image) return;
+
+      // 画像をダウンロードするためのaタグを作成する
+      const link = document.createElement("a");
+      // 画像のデータURLを取得する
+      image.getBase64(Jimp.AUTO, function(err, data) {
+        if (err) throw err;
+        // aタグのhref属性にデータURLを設定する
+        link.href = data;
+        // aタグのdownload属性にファイル名を設定する
+        link.download = "image.png";
+        // aタグをクリックする
+        link.click();
+
+      });
+    });
+
+  </script>
+</body>
+</html>

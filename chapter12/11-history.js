@@ -1,0 +1,2 @@
+history.back();
+history.forward();
